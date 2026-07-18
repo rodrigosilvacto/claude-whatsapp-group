@@ -31,9 +31,14 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!
     );
 
-    let query = supabase.from("summarized_topics").select("*").eq("group_id", groupId);
+    // Listagem padrão: apenas pendentes e aprovados (cancelados/rejeitados não aparecem)
+    let query = supabase
+      .from("summarized_topics")
+      .select("*")
+      .eq("group_id", groupId)
+      .in("status", ["pending", "approved"]);
 
-    if (status !== "all") {
+    if (status === "pending" || status === "approved") {
       query = query.eq("status", status);
     }
 
@@ -41,7 +46,7 @@ serve(async (req) => {
       query = query.gte("date_discussed", startDate).lte("date_discussed", endDate);
     }
 
-    const { data, error } = await query.order("date_discussed", { ascending: false });
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) throw error;
 

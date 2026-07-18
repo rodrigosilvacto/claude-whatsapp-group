@@ -22,22 +22,19 @@ export default function TopicsPage() {
   })
 
   const statusOptions = [
-    { value: 'all', label: 'Todos' },
-    { value: 'pending', label: 'Pendentes' },
+    { value: 'all', label: 'Em análise e aprovados' },
+    { value: 'pending', label: 'Aguardando aprovação' },
     { value: 'approved', label: 'Aprovados' },
-    { value: 'rejected', label: 'Rejeitados' },
   ] as const
 
   const statusBadgeColor: Record<string, string> = {
     approved: 'bg-emerald-50 text-emerald-700 border-emerald-100',
     pending: 'bg-amber-50 text-amber-700 border-amber-100',
-    rejected: 'bg-red-50 text-red-700 border-red-100',
   }
 
   const statusLabel = (value: string) => {
     if (value === 'approved') return 'Aprovado'
-    if (value === 'pending') return 'Pendente'
-    if (value === 'rejected') return 'Rejeitado'
+    if (value === 'pending') return 'Aguardando aprovação'
     return value
   }
 
@@ -51,7 +48,7 @@ export default function TopicsPage() {
             </label>
             <select
               value={status}
-              onChange={(e) => setStatus(e.target.value as typeof status)}
+              onChange={(e) => setStatus(e.target.value as 'all' | 'pending' | 'approved')}
               className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#003366]/30 focus:border-[#003366]"
             >
               {statusOptions.map((option) => (
@@ -62,9 +59,12 @@ export default function TopicsPage() {
             </select>
           </div>
           <p className="text-sm text-slate-600">
-            <span className="font-semibold text-slate-900">{topics.length}</span> tópico(s) encontrado(s)
+            <span className="font-semibold text-slate-900">{topics.length}</span> tópico(s) na listagem
           </p>
         </div>
+        <p className="text-xs text-slate-500 mt-3">
+          Ao aprovar, o tópico permanece na listagem. Ao cancelar, ele é removido e deixa de ser exibido.
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -104,7 +104,9 @@ export default function TopicsPage() {
                 </span>
               </div>
 
-              <p className="text-slate-700 text-sm leading-relaxed mb-4">{topic.discussion_summary}</p>
+              <p className="text-slate-700 text-sm leading-relaxed mb-4 whitespace-pre-wrap">
+                {topic.discussion_summary}
+              </p>
 
               {topic.references_mentioned && topic.references_mentioned.length > 0 && (
                 <div className="mb-4 pb-4 border-b border-slate-100">
@@ -137,10 +139,10 @@ export default function TopicsPage() {
                   <button
                     onClick={() => updateMutation.mutate({ id: topic.id, nextStatus: 'rejected' })}
                     disabled={updateMutation.isPending}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50"
                   >
                     <XCircle className="w-4 h-4" />
-                    Rejeitar
+                    Cancelar
                   </button>
                 </div>
               )}
@@ -149,9 +151,9 @@ export default function TopicsPage() {
         ) : (
           <div className="flex flex-col items-center justify-center py-20 bg-white border border-slate-200 rounded-lg">
             <Clock className="w-11 h-11 text-slate-300 mb-3" />
-            <p className="text-slate-700 text-sm font-medium">Nenhum tópico encontrado</p>
+            <p className="text-slate-700 text-sm font-medium">Nenhum tópico na listagem</p>
             <p className="text-slate-500 text-xs mt-1">
-              Utilize a opção &quot;Gerar resumo&quot; na tela de mensagens para consolidar discussões.
+              Use &quot;Gerar resumo&quot; na tela de mensagens para criar tópicos pendentes de aprovação.
             </p>
           </div>
         )}

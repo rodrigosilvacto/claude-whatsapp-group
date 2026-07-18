@@ -46,7 +46,7 @@ export interface Topic {
   topic_title: string
   discussion_summary: string
   references_mentioned: string[] | null
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'approved'
   created_at: string
   approved_at: string | null
   message_count: number
@@ -93,7 +93,7 @@ export const messageAPI = {
 export const topicAPI = {
   getTopics: async (
     groupId: string,
-    status: 'all' | 'pending' | 'approved' | 'rejected' = 'all',
+    status: 'all' | 'pending' | 'approved' = 'all',
     startDate?: string,
     endDate?: string
   ) => {
@@ -104,10 +104,11 @@ export const topicAPI = {
   },
 
   updateTopic: async (id: string, status: 'approved' | 'rejected') => {
-    const response = await api.patch<{ success: boolean; topic: Topic }>(`/update-topic/${id}`, {
-      status,
-    })
-    return response.data.topic
+    const response = await api.patch<{ success: boolean; topic?: Topic; deleted?: boolean }>(
+      `/update-topic/${id}`,
+      { status }
+    )
+    return response.data
   },
 }
 

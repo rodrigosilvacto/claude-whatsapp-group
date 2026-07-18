@@ -4,10 +4,10 @@ interface FilterState {
   groupId: string
   startDate: string
   endDate: string
-  status: 'all' | 'pending' | 'approved' | 'rejected'
+  status: 'all' | 'pending' | 'approved'
   setGroupId: (id: string) => void
   setDateRange: (start: string, end: string) => void
-  setStatus: (status: 'all' | 'pending' | 'approved' | 'rejected') => void
+  setStatus: (status: 'all' | 'pending' | 'approved') => void
   reset: () => void
 }
 

@@ -56,7 +56,7 @@ export default function App() {
                     Central de Monitoramento WhatsApp
                   </h1>
                   <p className="text-xs text-blue-100/80">
-                    Companhia Nitro Química Brasileira
+                    Captura, resumo e aprovação de discussões
                   </p>
                 </div>
               </div>
@@ -111,9 +111,8 @@ export default function App() {
         </main>
 
         <footer className="border-t border-slate-200 bg-white mt-8">
-          <div className="max-w-7xl mx-auto px-6 py-4 text-xs text-slate-500 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <span>Uso interno · Central de Monitoramento WhatsApp</span>
-            <span>Companhia Nitro Química Brasileira</span>
+          <div className="max-w-7xl mx-auto px-6 py-4 text-xs text-slate-500">
+            Uso interno · Central de Monitoramento WhatsApp
           </div>
         </footer>
       </div>

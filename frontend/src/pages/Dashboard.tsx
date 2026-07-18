@@ -43,12 +43,10 @@ export default function Dashboard() {
   const totalTopics = topicsData.length
   const approvedTopics = topicsData.filter((t) => t.status === 'approved').length
   const pendingTopics = topicsData.filter((t) => t.status === 'pending').length
-  const rejectedTopics = topicsData.filter((t) => t.status === 'rejected').length
 
   const statusData = [
     { name: 'Aprovados', value: approvedTopics, color: '#047857' },
-    { name: 'Pendentes', value: pendingTopics, color: '#b45309' },
-    { name: 'Rejeitados', value: rejectedTopics, color: '#b91c1c' },
+    { name: 'Aguardando aprovação', value: pendingTopics, color: '#b45309' },
   ].filter((item) => item.value > 0)
 
   const dailyData = useMemo(() => {
@@ -202,11 +200,7 @@ export default function Dashboard() {
                   <p className="text-xs text-slate-600 mt-1 line-clamp-2">{topic.discussion_summary}</p>
                 </div>
                 <span className="text-xs font-medium text-slate-600 whitespace-nowrap">
-                  {topic.status === 'approved'
-                    ? 'Aprovado'
-                    : topic.status === 'pending'
-                      ? 'Pendente'
-                      : 'Rejeitado'}
+                  {topic.status === 'approved' ? 'Aprovado' : 'Aguardando aprovação'}
                 </span>
               </div>
             ))}

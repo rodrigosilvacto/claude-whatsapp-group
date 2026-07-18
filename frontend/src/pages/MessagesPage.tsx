@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatMessageText, messageAPI } from '../services/api'
 import { useFilterStore } from '../services/store'
 import { Loader, Sparkles, MessageSquare, CheckCircle2, AlertCircle } from 'lucide-react'
 
 export default function MessagesPage() {
   const { groupId, startDate, endDate } = useFilterStore()
+  const queryClient = useQueryClient()
   const [isSummarizing, setIsSummarizing] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
 
@@ -19,12 +20,17 @@ export default function MessagesPage() {
     mutationFn: () => messageAPI.summarize(groupId, startDate, endDate),
     onSuccess: (data) => {
       setIsSummarizing(false)
-      setFeedback(data.message || 'Processamento concluído.')
+      setFeedback(data.message || 'Resumo gerado com sucesso.')
       refetch()
+      queryClient.invalidateQueries({ queryKey: ['topics'] })
     },
     onError: (err) => {
       setIsSummarizing(false)
-      setFeedback(err instanceof Error ? err.message : 'Falha ao processar mensagens.')
+      const axiosMsg =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { error?: string } } }).response?.data?.error
+          : undefined
+      setFeedback(axiosMsg || (err instanceof Error ? err.message : 'Falha ao gerar o resumo.'))
     },
   })
 
@@ -36,6 +42,7 @@ export default function MessagesPage() {
 
   const messages = messagesData?.messages || []
   const processedCount = messages.filter((m) => m.is_processed).length
+  const pendingCount = messages.length - processedCount
 
   return (
     <div className="space-y-5">
@@ -44,7 +51,8 @@ export default function MessagesPage() {
           <div>
             <p className="text-sm text-slate-600">
               <span className="font-semibold text-slate-900">{messagesData?.count ?? messages.length}</span>{' '}
-              mensagem(ns) no período ·{' '}
+              mensagem(ns) ·{' '}
+              <span className="font-semibold text-slate-900">{pendingCount}</span> pendente(s) de resumo ·{' '}
               <span className="font-semibold text-slate-900">{processedCount}</span> processada(s)
             </p>
             <p className="text-xs text-slate-500 mt-1">
@@ -54,13 +62,13 @@ export default function MessagesPage() {
           </div>
           <button
             onClick={handleSummarize}
-            disabled={isSummarizing || messages.length === 0}
+            disabled={isSummarizing || pendingCount === 0}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#003366] hover:bg-[#002952] text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSummarizing ? (
               <>
                 <Loader className="w-4 h-4 animate-spin" />
-                Processando...
+                Gerando resumo...
               </>
             ) : (
               <>

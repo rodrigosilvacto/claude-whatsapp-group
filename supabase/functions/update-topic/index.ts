@@ -24,19 +24,34 @@ serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!
-    );
+    if (status !== "approved" && status !== "rejected" && status !== "cancelled") {
+      return new Response(JSON.stringify({ error: "Status inválido" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const updateData: Record<string, unknown> = { status };
-    if (status === "approved") {
-      updateData.approved_at = new Date().toISOString();
+    const supabaseKey =
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, supabaseKey);
+
+    // Cancelar/rejeitar remove o tópico da listagem
+    if (status === "rejected" || status === "cancelled") {
+      const { error } = await supabase.from("summarized_topics").delete().eq("id", topicId);
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ success: true, deleted: true, id: topicId }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
     }
 
     const { data, error } = await supabase
       .from("summarized_topics")
-      .update(updateData)
+      .update({
+        status: "approved",
+        approved_at: new Date().toISOString(),
+      })
       .eq("id", topicId)
       .select()
       .single();
