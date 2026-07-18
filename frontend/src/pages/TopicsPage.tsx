@@ -67,8 +67,7 @@ export default function TopicsPage() {
           topics.map((topic) => (
             <div
               key={topic.id}
-              className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setSelectedTopic(topic.id)}
+              className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 hover:shadow-md transition-shadow"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
