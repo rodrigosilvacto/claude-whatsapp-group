@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -22,45 +21,42 @@ serve(async (req) => {
 
     if (!groupId || !startDate || !endDate) {
       return new Response(
-        JSON.stringify({ error: "Missing required parameters" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400,
-        }
+        JSON.stringify({ error: "Missing parameters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-    const { data, error } = await supabase
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    const { data, count, error } = await supabase
       .from("raw_messages")
-      .select("*")
+      .select("*", { count: "exact" })
       .eq("group_id", groupId)
       .gte("message_timestamp", startDate)
-      .lte("message_timestamp", endDate)
-      .order("message_timestamp", { ascending: true })
+      .lte("message_timestamp", endDate + " 23:59:59")
+      .order("message_timestamp", { ascending: false })
       .limit(limit);
 
     if (error) throw error;
 
     return new Response(
-      JSON.stringify({ messages: data, count: data?.length || 0 }),
+      JSON.stringify({
+        messages: data || [],
+        count: count || 0,
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       }
     );
   } catch (error) {
-    console.error("Error fetching messages:", error);
+    console.error("Error:", error.message);
     return new Response(
-      JSON.stringify({ error: "Failed to fetch messages" }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
+      JSON.stringify({ error: error.message || "Internal error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

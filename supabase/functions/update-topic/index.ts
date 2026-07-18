@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -16,54 +15,46 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const topicId = url.pathname.split("/").pop();
+    const { status } = await req.json();
 
-    if (!topicId) {
+    if (!topicId || !status) {
       return new Response(
-        JSON.stringify({ error: "Missing topic ID in URL" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400,
-        }
+        JSON.stringify({ error: "Missing parameters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { status } = await req.json();
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-    if (!["approved", "rejected"].includes(status)) {
-      return new Response(JSON.stringify({ error: "Invalid status" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      });
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    const updateData: any = { status };
+    if (status === "approved") {
+      updateData.approved_at = new Date().toISOString();
     }
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     const { data, error } = await supabase
       .from("summarized_topics")
-      .update({
-        status,
-        approved_at: new Date(),
-      })
+      .update(updateData)
       .eq("id", topicId)
-      .select();
+      .select()
+      .single();
 
     if (error) throw error;
 
-    return new Response(JSON.stringify({ success: true, topic: data?.[0] }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
-  } catch (error) {
-    console.error("Error updating topic:", error);
     return new Response(
-      JSON.stringify({ error: "Failed to update topic" }),
+      JSON.stringify({ success: true, topic: data }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+        status: 200,
       }
+    );
+  } catch (error) {
+    console.error("Error:", error.message);
+    return new Response(
+      JSON.stringify({ error: error.message || "Internal error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

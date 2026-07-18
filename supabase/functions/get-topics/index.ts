@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -21,16 +20,16 @@ serve(async (req) => {
     const endDate = url.searchParams.get("endDate");
 
     if (!groupId) {
-      return new Response(JSON.stringify({ error: "Missing groupId" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      });
+      return new Response(
+        JSON.stringify({ error: "Missing groupId" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     let query = supabase
       .from("summarized_topics")
@@ -41,32 +40,26 @@ serve(async (req) => {
       query = query.eq("status", status);
     }
 
-    if (startDate) {
-      query = query.gte("date_discussed", startDate);
+    if (startDate && endDate) {
+      query = query.gte("date_discussed", startDate).lte("date_discussed", endDate);
     }
 
-    if (endDate) {
-      query = query.lte("date_discussed", endDate);
-    }
-
-    const { data, error } = await query.order("date_discussed", {
-      ascending: false,
-    });
+    const { data, error } = await query.order("date_discussed", { ascending: false });
 
     if (error) throw error;
 
-    return new Response(JSON.stringify({ topics: data }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
-  } catch (error) {
-    console.error("Error fetching topics:", error);
     return new Response(
-      JSON.stringify({ error: "Failed to fetch topics" }),
+      JSON.stringify({ topics: data || [] }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
+        status: 200,
       }
+    );
+  } catch (error) {
+    console.error("Error:", error.message);
+    return new Response(
+      JSON.stringify({ error: error.message || "Internal error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
