@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,63 +15,64 @@ serve(async (req) => {
   try {
     const payload = await req.json();
 
-    // Validar se é uma mensagem recebida
-    if (payload.event !== "message_received") {
+    if (!payload.isGroup) {
       return new Response(JSON.stringify({ received: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     }
 
-    const { data } = payload;
+    const groupId = payload.chatId || payload.chatLid || `group-${payload.phone}`;
 
-    // Extrair dados relevantes
-    const groupId = data.chatId;
-    const senderName = data.sender.name || data.sender.pushName;
-    const senderPhone = data.sender.id;
-    const messageText = data.text || "";
-    const messageTimestamp = new Date(data.timestamp * 1000).toISOString();
+    if (!groupId || groupId === "null" || groupId.includes("null")) {
+      return new Response(JSON.stringify({ received: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
 
-    // Insert via Supabase REST API (anon key)
+    const senderName = payload.senderName || payload.name || payload.phone || "Unknown";
+    const senderPhone = payload.senderPhone || payload.phone || "unknown";
+    const messageText = payload.text || payload.message || "";
+    const messageTimestamp = payload.timestamp
+      ? new Date(payload.timestamp * 1000).toISOString()
+      : new Date().toISOString();
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-    const response = await fetch(`${supabaseUrl}/rest/v1/raw_messages`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": supabaseAnonKey || "",
-        "Authorization": `Bearer ${supabaseAnonKey}`,
-      },
-      body: JSON.stringify({
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    // Ensure group exists - use group_id as the match column
+    await supabase
+      .from("whatsapp_groups")
+      .upsert({
+        group_id: groupId,
+        group_name: payload.groupName || `Group ${groupId.substring(0, 8)}`,
+      }, {
+        onConflict: "group_id"
+      });
+
+    // Insert message
+    const { error: insertError } = await supabase
+      .from("raw_messages")
+      .insert({
         group_id: groupId,
         sender_name: senderName,
         sender_phone: senderPhone,
         message_text: messageText,
         message_timestamp: messageTimestamp,
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("Error inserting message:", error);
-      return new Response(JSON.stringify({ error: error }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
       });
-    }
 
-    console.log(
-      `Message captured from ${senderName}: ${messageText.substring(0, 50)}...`
-    );
+    if (insertError) throw insertError;
 
-    return new Response(JSON.stringify({ received: true }), {
+    return new Response(JSON.stringify({ received: true, success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
-    console.error("Webhook error:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
+    console.error("Error:", error.message || String(error));
+    return new Response(JSON.stringify({ error: error.message || "Internal error" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
