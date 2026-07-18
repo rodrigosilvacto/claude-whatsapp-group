@@ -43,16 +43,18 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Ensure group exists - use id as the match column
-    await supabase
-      .from("whatsapp_groups")
-      .upsert({
-        id: groupId,
-        group_name: payload.groupName || `Group ${groupId.substring(0, 8)}`,
-        active: true,
-      }, {
-        onConflict: "id"
-      });
+    // Ensure group exists (ignore if already exists)
+    try {
+      await supabase
+        .from("whatsapp_groups")
+        .insert({
+          id: groupId,
+          group_name: payload.groupName || `Group ${groupId.substring(0, 8)}`,
+          active: true,
+        });
+    } catch (e) {
+      // Group already exists, continue
+    }
 
     // Insert message
     const { error: insertError } = await supabase
