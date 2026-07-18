@@ -82,10 +82,12 @@ export const messageAPI = {
   },
 
   summarize: async (groupId: string, startDate: string, endDate: string) => {
-    const response = await api.post<{ success: boolean; topics: Topic[]; message?: string }>(
-      '/summarize-messages',
-      { groupId, startDate, endDate }
-    )
+    const response = await api.post<{
+      success: boolean
+      topics: Topic[]
+      message?: string
+      usedAi?: boolean
+    }>('/summarize-messages', { groupId, startDate, endDate })
     return response.data
   },
 }

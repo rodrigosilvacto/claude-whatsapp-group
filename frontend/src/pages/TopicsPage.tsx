@@ -1,7 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { topicAPI } from '../services/api'
 import { useFilterStore } from '../services/store'
-import { CheckCircle2, XCircle, Clock, Loader, AlertCircle } from 'lucide-react'
+import {
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Loader,
+  AlertCircle,
+  Bookmark,
+  Sparkles,
+} from 'lucide-react'
 
 export default function TopicsPage() {
   const { groupId, startDate, endDate, status, setStatus } = useFilterStore()
@@ -22,34 +30,23 @@ export default function TopicsPage() {
   })
 
   const statusOptions = [
-    { value: 'all', label: 'Em análise e aprovados' },
-    { value: 'pending', label: 'Aguardando aprovação' },
+    { value: 'all', label: 'Todos os resumos' },
+    { value: 'pending', label: 'Para revisar' },
     { value: 'approved', label: 'Aprovados' },
   ] as const
 
-  const statusBadgeColor: Record<string, string> = {
-    approved: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    pending: 'bg-amber-50 text-amber-700 border-amber-100',
-  }
-
-  const statusLabel = (value: string) => {
-    if (value === 'approved') return 'Aprovado'
-    if (value === 'pending') return 'Aguardando aprovação'
-    return value
-  }
+  const pendingCount = topics.filter((t) => t.status === 'pending').length
 
   return (
     <div className="space-y-5">
-      <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
-        <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-4">
+      <section className="surface-card p-5">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="w-full max-w-xs">
-            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
-              Situação
-            </label>
+            <label className="field-label">Mostrar</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as 'all' | 'pending' | 'approved')}
-              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#003366]/30 focus:border-[#003366]"
+              className="field-input"
             >
               {statusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -58,66 +55,85 @@ export default function TopicsPage() {
               ))}
             </select>
           </div>
-          <p className="text-sm text-slate-600">
-            <span className="font-semibold text-slate-900">{topics.length}</span> tópico(s) na listagem
-          </p>
+          <div className="flex flex-wrap gap-2">
+            <span className="chip bg-brand-50 text-brand-700 border-brand-100">
+              <Sparkles className="w-3.5 h-3.5" />
+              {topics.length} na tela
+            </span>
+            {pendingCount > 0 && (
+              <span className="chip bg-amber-50 text-amber-800 border-amber-100">
+                <Clock className="w-3.5 h-3.5" />
+                {pendingCount} aguardando sua decisão
+              </span>
+            )}
+          </div>
         </div>
-        <p className="text-xs text-slate-500 mt-3">
-          Ao aprovar, o tópico permanece na listagem. Ao cancelar, ele é removido e deixa de ser exibido.
+        <p className="text-xs text-slate-500 mt-4 leading-relaxed">
+          Ao aprovar, o resumo fica salvo. Ao cancelar, ele some da lista e não aparece mais.
         </p>
-      </div>
+      </section>
 
       <div className="space-y-4">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-white border border-slate-200 rounded-lg">
-            <Loader className="w-7 h-7 animate-spin text-[#003366] mb-3" />
-            <p className="text-slate-600 text-sm">Carregando tópicos...</p>
+          <div className="surface-card flex flex-col items-center justify-center py-20">
+            <Loader className="w-7 h-7 animate-spin text-brand-700 mb-3" />
+            <p className="text-slate-600 text-sm">Carregando resumos...</p>
           </div>
         ) : isError ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-white border border-slate-200 rounded-lg px-6 text-center">
+          <div className="surface-card flex flex-col items-center justify-center py-20 px-6 text-center">
             <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
-            <p className="text-slate-800 text-sm font-medium">Não foi possível carregar os tópicos</p>
+            <p className="text-ink text-sm font-semibold">Não foi possível carregar os resumos</p>
             <p className="text-slate-500 text-xs mt-2">
-              {error instanceof Error ? error.message : 'Erro de comunicação com o servidor.'}
+              {error instanceof Error ? error.message : 'Tente novamente em instantes.'}
             </p>
           </div>
         ) : topics.length > 0 ? (
-          topics.map((topic) => (
-            <div
+          topics.map((topic, index) => (
+            <article
               key={topic.id}
-              className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm hover:border-slate-300 transition-colors"
+              className="surface-card p-5 sm:p-6 hover:border-brand-200 transition-colors"
+              style={{ animationDelay: `${Math.min(index, 6) * 50}ms` }}
             >
-              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-3">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
                 <div className="flex-1">
-                  <h3 className="text-base font-semibold text-slate-900">{topic.topic_title}</h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {new Date(topic.date_discussed + 'T12:00:00').toLocaleDateString('pt-BR')}
-                    {topic.message_count != null && <> · {topic.message_count} mensagem(ns)</>}
+                  <h3 className="font-display text-xl font-semibold text-ink leading-snug">
+                    {topic.topic_title}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-2">
+                    {new Date(topic.date_discussed + 'T12:00:00').toLocaleDateString('pt-BR', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                    {topic.message_count != null && <> · baseada em {topic.message_count} mensagens</>}
                   </p>
                 </div>
                 <span
-                  className={`px-3 py-1 rounded text-xs font-semibold border whitespace-nowrap ${
-                    statusBadgeColor[topic.status] || 'bg-slate-50 text-slate-700 border-slate-200'
+                  className={`chip whitespace-nowrap ${
+                    topic.status === 'approved'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                      : 'bg-amber-50 text-amber-800 border-amber-100'
                   }`}
                 >
-                  {statusLabel(topic.status)}
+                  {topic.status === 'approved' ? 'Aprovado' : 'Para revisar'}
                 </span>
               </div>
 
-              <p className="text-slate-700 text-sm leading-relaxed mb-4 whitespace-pre-wrap">
+              <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap mb-5">
                 {topic.discussion_summary}
               </p>
 
               {topic.references_mentioned && topic.references_mentioned.length > 0 && (
-                <div className="mb-4 pb-4 border-b border-slate-100">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
-                    Referências
+                <div className="mb-5 p-4 rounded-xl bg-sand/70 border border-slate-200/70">
+                  <p className="text-xs font-semibold text-slate-600 mb-2 inline-flex items-center gap-1.5">
+                    <Bookmark className="w-3.5 h-3.5" />
+                    Referências encontradas
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {topic.references_mentioned.map((ref, idx) => (
                       <span
                         key={idx}
-                        className="text-xs bg-slate-50 text-slate-700 border border-slate-200 px-2.5 py-1 rounded"
+                        className="chip bg-white text-brand-800 border-brand-100"
                       >
                         {ref}
                       </span>
@@ -127,33 +143,33 @@ export default function TopicsPage() {
               )}
 
               {topic.status === 'pending' && (
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3 pt-1">
                   <button
                     onClick={() => updateMutation.mutate({ id: topic.id, nextStatus: 'approved' })}
                     disabled={updateMutation.isPending}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                    className="btn-success"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    Aprovar
+                    Aprovar resumo
                   </button>
                   <button
                     onClick={() => updateMutation.mutate({ id: topic.id, nextStatus: 'rejected' })}
                     disabled={updateMutation.isPending}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50"
+                    className="btn-ghost-danger"
                   >
                     <XCircle className="w-4 h-4" />
                     Cancelar
                   </button>
                 </div>
               )}
-            </div>
+            </article>
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 bg-white border border-slate-200 rounded-lg">
+          <div className="surface-card flex flex-col items-center justify-center py-20 px-6 text-center">
             <Clock className="w-11 h-11 text-slate-300 mb-3" />
-            <p className="text-slate-700 text-sm font-medium">Nenhum tópico na listagem</p>
-            <p className="text-slate-500 text-xs mt-1">
-              Use &quot;Gerar resumo&quot; na tela de mensagens para criar tópicos pendentes de aprovação.
+            <p className="text-ink text-sm font-semibold">Nenhum resumo por aqui ainda</p>
+            <p className="text-slate-500 text-xs mt-1 max-w-sm">
+              Vá em Conversas e toque em &quot;Gerar resumo com IA&quot; para criar os primeiros.
             </p>
           </div>
         )}

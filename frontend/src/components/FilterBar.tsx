@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { groupAPI } from '../services/api'
 import { useFilterStore } from '../services/store'
-import { CalendarRange, RefreshCw, Users } from 'lucide-react'
+import { CalendarDays, RotateCcw, UsersRound } from 'lucide-react'
 
 export default function FilterBar() {
   const { groupId, startDate, endDate, setGroupId, setDateRange, reset } = useFilterStore()
@@ -12,22 +12,31 @@ export default function FilterBar() {
   })
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-4 mb-6 shadow-sm">
-      <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-        <div className="flex-1 min-w-[200px]">
-          <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
-            <Users className="w-3.5 h-3.5" />
-            Grupo monitorado
+    <div className="surface-card p-4 sm:p-5 mb-6">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <p className="text-sm font-semibold text-ink">O que você quer ver?</p>
+          <p className="text-xs text-slate-500 mt-1">
+            Escolha o grupo e o período. O restante a gente organiza.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1fr_auto] gap-3 items-end">
+        <div>
+          <label className="field-label">
+            <span className="inline-flex items-center gap-1.5">
+              <UsersRound className="w-3.5 h-3.5" />
+              Grupo
+            </span>
           </label>
           <select
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}
             disabled={isLoading}
-            className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#003366]/30 focus:border-[#003366]"
+            className="field-input"
           >
-            {groups.length === 0 && (
-              <option value={groupId}>Grupo padrão</option>
-            )}
+            {groups.length === 0 && <option value={groupId}>Carregando grupos...</option>}
             {groups.map((group) => (
               <option key={group.id} value={group.id}>
                 {group.group_name}
@@ -36,39 +45,39 @@ export default function FilterBar() {
           </select>
         </div>
 
-        <div className="flex-1 min-w-[160px]">
-          <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
-            <CalendarRange className="w-3.5 h-3.5" />
-            Data inicial
+        <div>
+          <label className="field-label">
+            <span className="inline-flex items-center gap-1.5">
+              <CalendarDays className="w-3.5 h-3.5" />
+              De
+            </span>
           </label>
           <input
             type="date"
             value={startDate}
             onChange={(e) => setDateRange(e.target.value, endDate)}
-            className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#003366]/30 focus:border-[#003366]"
+            className="field-input"
           />
         </div>
 
-        <div className="flex-1 min-w-[160px]">
-          <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
-            <CalendarRange className="w-3.5 h-3.5" />
-            Data final
+        <div>
+          <label className="field-label">
+            <span className="inline-flex items-center gap-1.5">
+              <CalendarDays className="w-3.5 h-3.5" />
+              Até
+            </span>
           </label>
           <input
             type="date"
             value={endDate}
             onChange={(e) => setDateRange(startDate, e.target.value)}
-            className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#003366]/30 focus:border-[#003366]"
+            className="field-input"
           />
         </div>
 
-        <button
-          type="button"
-          onClick={reset}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Redefinir
+        <button type="button" onClick={reset} className="btn-secondary w-full xl:w-auto">
+          <RotateCcw className="w-4 h-4" />
+          Limpar filtros
         </button>
       </div>
     </div>
