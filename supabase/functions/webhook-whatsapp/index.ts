@@ -43,17 +43,20 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    // Ensure group exists (ignore if already exists)
-    try {
-      await supabase
-        .from("whatsapp_groups")
-        .insert({
-          id: groupId,
-          group_name: payload.groupName || `Group ${groupId.substring(0, 8)}`,
-          active: true,
-        });
-    } catch (e) {
-      // Group already exists, continue
+    // Ensure group exists (try insert, ignore if already exists)
+    const groupPhone = payload.phone || payload.senderPhone || groupId.split("-")[0] || "unknown";
+    const { error: groupError } = await supabase
+      .from("whatsapp_groups")
+      .insert({
+        id: groupId,
+        group_name: payload.groupName || `Group ${groupId.substring(0, 8)}`,
+        group_phone: groupPhone,
+        active: true,
+      });
+
+    // Only throw if error is NOT a unique constraint violation
+    if (groupError && !groupError.message.includes("duplicate key")) {
+      throw groupError;
     }
 
     // Insert message
