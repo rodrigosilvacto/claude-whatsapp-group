@@ -15,7 +15,7 @@ const today = new Date()
 const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
 
 export const useFilterStore = create<FilterState>((set) => ({
-  groupId: '559999999999-1234567890@g.us', // Default group (substitua com o seu)
+  groupId: '5599999999999-1234567890@g.us', // Default group (substitua com o seu)
   startDate: yesterday.toISOString().split('T')[0],
   endDate: today.toISOString().split('T')[0],
   status: 'pending',
