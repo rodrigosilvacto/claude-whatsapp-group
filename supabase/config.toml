@@ -24,6 +24,7 @@ port = 54324
 [functions.webhook-whatsapp]
 enabled = true
 import_map = ""
+verify_jwt = false
 
 [functions.summarize-messages]
 enabled = true

@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,17 +7,11 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
     const payload = await req.json();
 
     // Validar se é uma mensagem recebida
@@ -36,21 +29,32 @@ serve(async (req) => {
     const senderName = data.sender.name || data.sender.pushName;
     const senderPhone = data.sender.id;
     const messageText = data.text || "";
-    const messageTimestamp = new Date(data.timestamp * 1000);
+    const messageTimestamp = new Date(data.timestamp * 1000).toISOString();
 
-    // Inserir na tabela raw_messages
-    const { error } = await supabase.from("raw_messages").insert({
-      group_id: groupId,
-      sender_name: senderName,
-      sender_phone: senderPhone,
-      message_text: messageText,
-      message_timestamp: messageTimestamp,
-      is_processed: false,
+    // Insert via Supabase REST API (anon key)
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+    const response = await fetch(`${supabaseUrl}/rest/v1/raw_messages`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": supabaseAnonKey || "",
+        "Authorization": `Bearer ${supabaseAnonKey}`,
+      },
+      body: JSON.stringify({
+        group_id: groupId,
+        sender_name: senderName,
+        sender_phone: senderPhone,
+        message_text: messageText,
+        message_timestamp: messageTimestamp,
+      }),
     });
 
-    if (error) {
+    if (!response.ok) {
+      const error = await response.text();
       console.error("Error inserting message:", error);
-      return new Response(JSON.stringify({ error: error.message }), {
+      return new Response(JSON.stringify({ error: error }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
       });
