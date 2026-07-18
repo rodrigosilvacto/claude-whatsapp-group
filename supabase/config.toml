@@ -1,0 +1,58 @@
+# Supabase Configuration
+
+# API settings
+[api]
+enabled = true
+max_body_size = "20 MiB"
+
+# Database settings
+[db]
+port = 5432
+major_version = 15
+
+# Studio settings
+[studio]
+enabled = true
+port = 54323
+
+# Inbucket settings (email testing)
+[inbucket]
+enabled = true
+port = 54324
+
+# Functions settings
+[functions.webhook-whatsapp]
+enabled = true
+import_map = ""
+
+[functions.summarize-messages]
+enabled = true
+import_map = ""
+
+[functions.get-messages]
+enabled = true
+import_map = ""
+
+[functions.get-topics]
+enabled = true
+import_map = ""
+
+[functions.update-topic]
+enabled = true
+import_map = ""
+
+# Environment variables for Edge Functions
+[env.local.functions.webhook-whatsapp]
+enabled = true
+
+[env.local.functions.summarize-messages]
+enabled = true
+
+[env.local.functions.get-messages]
+enabled = true
+
+[env.local.functions.get-topics]
+enabled = true
+
+[env.local.functions.update-topic]
+enabled = true
