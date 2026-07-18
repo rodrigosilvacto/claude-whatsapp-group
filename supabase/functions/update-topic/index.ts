@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "PATCH, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -18,18 +18,18 @@ serve(async (req) => {
     const { status } = await req.json();
 
     if (!topicId || !status) {
-      return new Response(
-        JSON.stringify({ error: "Missing parameters" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Parâmetros obrigatórios ausentes" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!
+    );
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    const updateData: any = { status };
+    const updateData: Record<string, unknown> = { status };
     if (status === "approved") {
       updateData.approved_at = new Date().toISOString();
     }
@@ -43,18 +43,16 @@ serve(async (req) => {
 
     if (error) throw error;
 
-    return new Response(
-      JSON.stringify({ success: true, topic: data }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
-    );
+    return new Response(JSON.stringify({ success: true, topic: data }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
-    console.error("Error:", error.message);
-    return new Response(
-      JSON.stringify({ error: error.message || "Internal error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const message = error instanceof Error ? error.message : "Erro interno";
+    console.error("Erro:", message);
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

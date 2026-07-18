@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+// Repositório: https://github.com/rodrigosilvacto/claude-whatsapp-group
+// URL Pages: https://rodrigosilvacto.github.io/claude-whatsapp-group/
+const repoName = 'claude-whatsapp-group'
+
+export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: '/claude-whatsapp-group/',
+  base: command === 'build' ? `/${repoName}/` : '/',
   server: {
     port: 5173,
     open: true,
@@ -12,4 +16,4 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
   },
-})
+}))

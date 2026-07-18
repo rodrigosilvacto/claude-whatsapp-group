@@ -26,21 +26,35 @@ enabled = true
 import_map = ""
 verify_jwt = false
 
+[functions.health]
+enabled = true
+import_map = ""
+verify_jwt = false
+
 [functions.summarize-messages]
 enabled = true
 import_map = ""
+verify_jwt = true
 
 [functions.get-messages]
 enabled = true
 import_map = ""
+verify_jwt = true
+
+[functions.get-groups]
+enabled = true
+import_map = ""
+verify_jwt = true
 
 [functions.get-topics]
 enabled = true
 import_map = ""
+verify_jwt = true
 
 [functions.update-topic]
 enabled = true
 import_map = ""
+verify_jwt = true
 
 # Environment variables for Edge Functions
 [env.local.functions.webhook-whatsapp]

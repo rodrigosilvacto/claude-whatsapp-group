@@ -4,8 +4,35 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+function extractMessageText(payload: Record<string, unknown>): string {
+  const raw = payload.text ?? payload.message ?? payload.body ?? "";
+
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (!trimmed) return "";
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed && typeof parsed === "object" && typeof parsed.message === "string") {
+        return parsed.message;
+      }
+      if (typeof parsed === "string") return parsed;
+    } catch {
+      return trimmed;
+    }
+    return trimmed;
+  }
+
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    if (typeof obj.message === "string") return obj.message;
+    if (typeof obj.text === "string") return obj.text;
+  }
+
+  return String(raw || "");
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -24,51 +51,51 @@ serve(async (req) => {
 
     const groupId = payload.chatId || payload.chatLid || `group-${payload.phone}`;
 
-    if (!groupId || groupId === "null" || groupId.includes("null")) {
+    if (!groupId || groupId === "null" || String(groupId).includes("null")) {
       return new Response(JSON.stringify({ received: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
     }
 
-    const senderName = payload.senderName || payload.name || payload.phone || "Unknown";
-    const senderPhone = payload.senderPhone || payload.phone || "unknown";
-    const messageText = payload.text || payload.message || "";
+    const senderName = payload.senderName || payload.name || payload.phone || "Desconhecido";
+    const senderPhone = payload.senderPhone || payload.phone || "desconhecido";
+    const messageText = extractMessageText(payload);
     const messageTimestamp = payload.timestamp
       ? new Date(payload.timestamp * 1000).toISOString()
       : new Date().toISOString();
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    // Ensure group exists (try insert, ignore if already exists)
-    const groupPhone = payload.phone || payload.senderPhone || groupId.split("-")[0] || "unknown";
-    const { error: groupError } = await supabase
-      .from("whatsapp_groups")
-      .insert({
-        id: groupId,
-        group_name: payload.groupName || `Group ${groupId.substring(0, 8)}`,
-        group_phone: groupPhone,
-        active: true,
+    if (!messageText) {
+      return new Response(JSON.stringify({ received: true, skipped: "empty_message" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
       });
+    }
 
-    // Only throw if error is NOT a unique constraint violation
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!
+    );
+
+    const groupPhone = payload.phone || payload.senderPhone || String(groupId).split("-")[0] || "unknown";
+    const { error: groupError } = await supabase.from("whatsapp_groups").insert({
+      id: groupId,
+      group_name: payload.groupName || `Grupo ${String(groupId).substring(0, 12)}`,
+      group_phone: groupPhone,
+      active: true,
+    });
+
     if (groupError && !groupError.message.includes("duplicate key")) {
       throw groupError;
     }
 
-    // Insert message
-    const { error: insertError } = await supabase
-      .from("raw_messages")
-      .insert({
-        group_id: groupId,
-        sender_name: senderName,
-        sender_phone: senderPhone,
-        message_text: messageText,
-        message_timestamp: messageTimestamp,
-      });
+    const { error: insertError } = await supabase.from("raw_messages").insert({
+      group_id: groupId,
+      sender_name: senderName,
+      sender_phone: senderPhone,
+      message_text: messageText,
+      message_timestamp: messageTimestamp,
+    });
 
     if (insertError) throw insertError;
 
@@ -77,8 +104,9 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    console.error("Error:", error.message || String(error));
-    return new Response(JSON.stringify({ error: error.message || "Internal error" }), {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Erro:", message);
+    return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

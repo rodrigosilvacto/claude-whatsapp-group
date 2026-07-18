@@ -11,22 +11,27 @@ interface FilterState {
   reset: () => void
 }
 
+function toDateInput(date: Date) {
+  return date.toISOString().split('T')[0]
+}
+
 const today = new Date()
-const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
+const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
 
 export const useFilterStore = create<FilterState>((set) => ({
-  groupId: 'group-120363429239267932-group', // Default group
-  startDate: yesterday.toISOString().split('T')[0],
-  endDate: today.toISOString().split('T')[0],
-  status: 'pending',
+  groupId: 'group-120363429239267932-group',
+  startDate: toDateInput(sevenDaysAgo),
+  endDate: toDateInput(today),
+  status: 'all',
 
   setGroupId: (id: string) => set({ groupId: id }),
   setDateRange: (start: string, end: string) => set({ startDate: start, endDate: end }),
   setStatus: (status) => set({ status }),
 
-  reset: () => set({
-    startDate: yesterday.toISOString().split('T')[0],
-    endDate: today.toISOString().split('T')[0],
-    status: 'pending',
-  }),
+  reset: () =>
+    set({
+      startDate: toDateInput(sevenDaysAgo),
+      endDate: toDateInput(today),
+      status: 'all',
+    }),
 }))

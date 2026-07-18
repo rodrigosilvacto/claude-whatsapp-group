@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -20,21 +20,18 @@ serve(async (req) => {
     const endDate = url.searchParams.get("endDate");
 
     if (!groupId) {
-      return new Response(
-        JSON.stringify({ error: "Missing groupId" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Parâmetro groupId é obrigatório" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!
+    );
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    let query = supabase
-      .from("summarized_topics")
-      .select("*")
-      .eq("group_id", groupId);
+    let query = supabase.from("summarized_topics").select("*").eq("group_id", groupId);
 
     if (status !== "all") {
       query = query.eq("status", status);
@@ -48,18 +45,16 @@ serve(async (req) => {
 
     if (error) throw error;
 
-    return new Response(
-      JSON.stringify({ topics: data || [] }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
-    );
+    return new Response(JSON.stringify({ topics: data || [] }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
   } catch (error) {
-    console.error("Error:", error.message);
-    return new Response(
-      JSON.stringify({ error: error.message || "Internal error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const message = error instanceof Error ? error.message : "Erro interno";
+    console.error("Erro:", message);
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

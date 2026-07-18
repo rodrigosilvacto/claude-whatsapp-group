@@ -2,17 +2,20 @@
 node_modules/
 pnpm-lock.yaml
 yarn.lock
-package-lock.json
 
 # Build
 dist/
 build/
 *.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
 
-# Environment
+# Environment (manter .env.production e .env.example versionados)
 .env
 .env.local
 .env.*.local
+!.env.example
+!.env.production
 
 # IDE
 .vscode/

@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { messageAPI } from '../services/api'
+import { formatMessageText, messageAPI } from '../services/api'
 import { useFilterStore } from '../services/store'
-import { Loader, Sparkles, MessageSquare, CheckCircle2 } from 'lucide-react'
+import { Loader, Sparkles, MessageSquare, CheckCircle2, AlertCircle } from 'lucide-react'
 
 export default function MessagesPage() {
   const { groupId, startDate, endDate } = useFilterStore()
   const [isSummarizing, setIsSummarizing] = useState(false)
+  const [feedback, setFeedback] = useState<string | null>(null)
 
-  const { data: messagesData, isLoading, refetch } = useQuery({
+  const { data: messagesData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['messages', groupId, startDate, endDate],
     queryFn: () => messageAPI.getMessages(groupId, startDate, endDate, 500),
     enabled: !!groupId,
@@ -16,111 +17,114 @@ export default function MessagesPage() {
 
   const summarizeMutation = useMutation({
     mutationFn: () => messageAPI.summarize(groupId, startDate, endDate),
-    onSuccess: () => {
+    onSuccess: (data) => {
       setIsSummarizing(false)
+      setFeedback(data.message || 'Processamento concluído.')
       refetch()
     },
-    onError: (error) => {
+    onError: (err) => {
       setIsSummarizing(false)
-      console.error(error)
+      setFeedback(err instanceof Error ? err.message : 'Falha ao processar mensagens.')
     },
   })
 
   const handleSummarize = () => {
+    setFeedback(null)
     setIsSummarizing(true)
     summarizeMutation.mutate()
   }
 
   const messages = messagesData?.messages || []
-  const processedCount = messages.filter(m => m.is_processed).length
+  const processedCount = messages.filter((m) => m.is_processed).length
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Header with Stats */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="flex-1">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Mensagens Capturadas</h2>
-            <p className="text-slate-600 dark:text-slate-400 text-sm">
-              {messages.length} mensagens · {processedCount} processadas · {startDate} a {endDate}
+    <div className="space-y-5">
+      <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <p className="text-sm text-slate-600">
+              <span className="font-semibold text-slate-900">{messagesData?.count ?? messages.length}</span>{' '}
+              mensagem(ns) no período ·{' '}
+              <span className="font-semibold text-slate-900">{processedCount}</span> processada(s)
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              Período: {new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR')} a{' '}
+              {new Date(endDate + 'T12:00:00').toLocaleDateString('pt-BR')}
             </p>
           </div>
           <button
             onClick={handleSummarize}
             disabled={isSummarizing || messages.length === 0}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#003366] hover:bg-[#002952] text-white rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSummarizing ? (
               <>
                 <Loader className="w-4 h-4 animate-spin" />
-                Resumindo...
+                Processando...
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                Resumir Mensagens
+                Gerar resumo
               </>
             )}
           </button>
         </div>
+        {feedback && (
+          <p className="mt-3 text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
+            {feedback}
+          </p>
+        )}
       </div>
 
-      {/* Messages List */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader className="w-8 h-8 animate-spin text-blue-600 mb-3" />
-            <p className="text-slate-600 dark:text-slate-400">Carregando mensagens...</p>
+            <Loader className="w-7 h-7 animate-spin text-[#003366] mb-3" />
+            <p className="text-slate-600 text-sm">Carregando mensagens...</p>
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+            <AlertCircle className="w-10 h-10 text-red-400 mb-3" />
+            <p className="text-slate-800 text-sm font-medium">Não foi possível carregar as mensagens</p>
+            <p className="text-slate-500 text-xs mt-2 max-w-md">
+              {error instanceof Error ? error.message : 'Erro de comunicação com o servidor.'}
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="mt-4 px-4 py-2 text-sm font-medium text-[#003366] border border-[#003366]/30 rounded-md hover:bg-[#003366]/5"
+            >
+              Tentar novamente
+            </button>
           </div>
         ) : messages.length > 0 ? (
-          <div className="divide-y divide-slate-200 dark:divide-slate-800">
-            {messages.map((message, idx) => (
-              <div
-                key={message.id}
-                className="p-5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
-                style={{ animation: `slideIn 0.4s ease-out ${idx * 50}ms` }}
-              >
-                <style>{`
-                  @keyframes slideIn {
-                    from {
-                      opacity: 0;
-                      transform: translateY(10px);
-                    }
-                    to {
-                      opacity: 1;
-                      transform: translateY(0);
-                    }
-                  }
-                `}</style>
-
+          <div className="divide-y divide-slate-100">
+            {messages.map((message) => (
+              <div key={message.id} className="p-5 hover:bg-slate-50/80 transition-colors">
                 <div className="flex items-start gap-4">
-                  {/* Avatar */}
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-medium text-sm">
-                      {message.sender_name.charAt(0).toUpperCase()}
-                    </div>
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#003366] flex items-center justify-center text-white font-semibold text-sm">
+                    {(message.sender_name || '?').charAt(0).toUpperCase()}
                   </div>
 
-                  {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-start justify-between gap-3 mb-1.5">
                       <div>
-                        <h4 className="font-semibold text-slate-900 dark:text-white text-sm">
-                          {message.sender_name}
+                        <h4 className="font-semibold text-slate-900 text-sm">
+                          {message.sender_name || 'Remetente não identificado'}
                         </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        <p className="text-xs text-slate-500 mt-0.5">
                           {new Date(message.message_timestamp).toLocaleString('pt-BR')}
                         </p>
                       </div>
                       {message.is_processed && (
-                        <div className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">
+                        <div className="flex items-center gap-1 px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-100">
                           <CheckCircle2 className="w-3 h-3" />
                           <span className="text-xs font-medium">Processada</span>
                         </div>
                       )}
                     </div>
-                    <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed break-words">
-                      {message.message_text}
+                    <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap break-words">
+                      {formatMessageText(message.message_text)}
                     </p>
                   </div>
                 </div>
@@ -129,9 +133,10 @@ export default function MessagesPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-20">
-            <MessageSquare className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-4" />
-            <p className="text-slate-600 dark:text-slate-400 text-sm">
-              Nenhuma mensagem encontrada para o período selecionado
+            <MessageSquare className="w-11 h-11 text-slate-300 mb-3" />
+            <p className="text-slate-700 text-sm font-medium">Nenhuma mensagem encontrada</p>
+            <p className="text-slate-500 text-xs mt-1">
+              Ajuste o grupo ou o período selecionado e tente novamente.
             </p>
           </div>
         )}
