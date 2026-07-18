@@ -1,7 +1,8 @@
+/// <reference types="vite/client" />
 import axios from 'axios'
 
 // Supabase Edge Functions URL
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://xtrvojnauvkkterogrst.supabase.co'
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL as string) || 'https://xtrvojnauvkkterogrst.supabase.co'
 const FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`
 
 const api = axios.create({

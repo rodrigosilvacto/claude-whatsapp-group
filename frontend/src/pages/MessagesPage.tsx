@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { messageAPI } from '../services/api'
 import { useFilterStore } from '../services/store'
-import { formatDistanceToNow } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { Loader, Send } from 'lucide-react'
 
 export default function MessagesPage() {

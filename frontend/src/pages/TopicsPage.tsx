@@ -7,7 +7,6 @@ import { CheckCircle, XCircle, Clock } from 'lucide-react'
 export default function TopicsPage() {
   const { groupId, startDate, endDate, status, setStatus } = useFilterStore()
   const queryClient = useQueryClient()
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null)
 
   // Fetch topics
   const { data: topicsData, isLoading } = useQuery({
@@ -22,7 +21,6 @@ export default function TopicsPage() {
       topicAPI.updateTopic(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['topics'] })
-      setSelectedTopic(null)
     },
   })
 

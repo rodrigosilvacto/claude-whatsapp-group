@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { messageAPI, topicAPI } from '../services/api'
 import { useFilterStore } from '../services/store'
@@ -7,7 +6,6 @@ import { AlertCircle, CheckCircle, Clock } from 'lucide-react'
 
 export default function Dashboard() {
   const { groupId, startDate, endDate } = useFilterStore()
-  const [isLoading, setIsLoading] = useState(false)
 
   // Fetch messages
   const { data: messagesData } = useQuery({
